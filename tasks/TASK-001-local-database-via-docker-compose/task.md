@@ -1,9 +1,15 @@
 ---
 id: TASK-001
 title: Local database running via Docker Compose
-status: backlog
+status: done
 created: 2026-10-26
 updated: 2026-10-26
+plan_approved: 2026-10-26
+plan_approved_by: user
+plan_revision: draft-2
+plan_revised: 2026-10-26
+accepted: 2026-10-26
+accepted_by: user
 ---
 
 # Business Task: Local database running via Docker Compose
@@ -90,6 +96,23 @@ Open questions that affect these criteria are listed under "Open questions".
   required by the team's machines?
 - Should a database administration/UI tool be included for inspecting data,
   or is that out of scope?
+
+## Verification and acceptance
+
+Verified on 2026-10-26 against plan revision `draft-2` (evidence in
+`working-notes.md`; review findings in `review.md`).
+
+| Acceptance criterion | Evidence |
+| --- | --- |
+| Documented Compose instructions | `README.md` "Local database" section; `docs/local-database.md` |
+| Running the documented command starts the DB | `docker compose up -d` → container became `healthy`; `docker compose ps` shows `Up ... (healthy)` |
+| Stop/cleanup command shuts it down | `docker compose down` → container and network removed; `docker compose ps` empty |
+| Reachable on documented host/port, with a described check | `127.0.0.1:5432` (loopback only); `psql "postgresql://...@127.0.0.1:5432/educator" -c "select 1;"` → `1` |
+| Second developer reaches the same result | Documented from-scratch path (copy `.env.example` → `.env`, `docker compose up -d`, verify); verified by following the docs. Note: a clean-checkout run on another machine remains a human check. |
+| Data location and restart behavior stated | `docs/local-database.md`: volume `<project>_pgdata`; data survives `stop`/`restart`/`down`, deleted by `down -v`; persistence test passed |
+| No hardcoded committed secrets | `.env.example` holds a non-secret local placeholder; `.env` is git-ignored; user confirmed the placeholder satisfies this criterion |
+
+Accepted by the user on 2026-10-26.
 
 ## Links
 

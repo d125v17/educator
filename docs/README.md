@@ -1,17 +1,65 @@
 # Project Documentation
 
 ## Purpose
-TODO: Describe the purpose of the project.
+TODO: Describe the purpose of the project. This is still an open item; do not
+invent a purpose from the code alone.
 
 ## Technology stack
-TODO: Record language, framework, runtime, and database.
+- Language: TypeScript 5 (`tsconfig.json`)
+- Framework: Next.js 16.4.3, App Router (`package.json`, `src/app/`)
+- Runtime: Node.js (Next.js default)
+- UI: React 19.3.0, Tailwind CSS 4
+- Lint: ESLint 9 with `eslint-config-next`
+- Tests: none configured yet
+- Database: PostgreSQL 17, run locally via Docker Compose — see `local-database.md`
+
+Update this list from `package.json` when dependencies change.
 
 ## Documentation index
-- `architecture.md` — architecture and module boundaries
-- `coding-standards.md` — coding conventions
-- `testing.md` — test commands and expectations
-- `security.md` — security requirements
+- `local-database.md` — running the local PostgreSQL database via Docker Compose
+- `architecture.md` — architecture and module boundaries (planned, not written)
+- `coding-standards.md` — coding conventions (planned, not written)
+- `testing.md` — test commands and expectations (planned, not written)
+- `security.md` — security requirements (planned, not written)
 - `decisions/` — architecture decision records
+  - `0001-local-database-postgresql-docker-compose.md` — local database choice
+    (PostgreSQL 17 on Docker Compose)
+
+Pages marked "planned" do not exist yet and must not be treated as available
+sources of truth.
+
+## Model routing and cost
+
+Cost control is the default: every stage runs on one inexpensive model, and a
+more capable model is used only when it is explicitly requested for a
+specific run.
+
+| Stage | Model | Input / output per 1M tokens |
+| --- | --- | --- |
+| Every stage by default (task creation, planning, implementation, review, verification) | `openrouter/deepseek/deepseek-v4.1-flash` | $0.02 / $1.00 |
+| Optional escalation for difficult planning or implementation | `openrouter/~deepseek/deepseek-pro-latest` | $0.13 / $0.40 |
+| Optional escalation for high-risk independent review | `openrouter/openai/gpt-6-sol` | $2.00 / $10.00 |
+
+Rules:
+
+- Do not pin an expensive model in the repository configuration. Escalate per
+  run instead, for example `opencode run --model <id>` or by selecting it for
+  one session with `/models`.
+- The independent review agent is pinned to the inexpensive default on
+  purpose, so a review cannot silently inherit an expensive session model.
+- Prefer escalating planning over escalating review; a weak plan is more
+  expensive to correct than a missed minor review finding.
+- For output-heavy work, `openrouter/deepseek/deepseek-v4.1-flash-1017`
+  ($0.15 / $0.60) has cheaper output but 7.5x the input price.
+
+Verified facts and limits:
+
+- Prices above were read from the OpenRouter catalog on 2026-10-26 and are
+  not a guarantee of future pricing. Cache reads, provider routing, and
+  time-of-day price overrides can change actual spend.
+- Catalog listing is not proof of quality. Treat the escalation choices as
+  untested hypotheses until measured on real tasks in this project.
+- Model availability is project-specific and depends on credentials.
 
 ## Maintenance
 Update this documentation when project structure, dependencies,

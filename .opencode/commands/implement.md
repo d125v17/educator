@@ -10,8 +10,12 @@ working-notes.md, and relevant project documentation.
 
 Before editing:
 - Confirm that task.md status is implementation.
-- Confirm that plan.md contains explicit user approval.
-- If either condition is not satisfied, stop without editing application code.
+- Confirm that plan.md contains recorded user approval, including the approver
+  and an approval reference.
+- Confirm that the recorded approval refers to the exact current plan revision.
+- If any condition is not satisfied, stop without editing application code.
+- If you must change the approved plan materially, stop and ask for renewed
+  approval instead of expanding the scope.
 
 Implement the approved plan only.
 Update working-notes.md with important findings.

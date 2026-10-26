@@ -12,13 +12,14 @@ Confirm that the task is in review status.
 Compare the implementation with the approved plan
 and business acceptance criteria.
 
-Do not edit application files.
+Do not edit application files and do not modify repository files.
 
-Record actionable findings in review.md.
-If findings require changes, report that implementation
-must resume. Do not mark the task as done.
+Return actionable findings with file locations and severity to the parent.
+A separately authorized action records the review result in review.md.
 
-If no blocking findings remain, update task.md status
-to verification and update its date.
+If findings require changes, recommend that implementation resume.
+If no blocking findings remain, recommend moving the task to verification.
+
+Do not change task status. Do not mark the task as done.
 
 Report findings and the recommended next action.

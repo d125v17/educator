@@ -18,6 +18,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Local database
+
+The project runs a local PostgreSQL database with Docker Compose (Compose v2).
+
+```bash
+cp .env.example .env   # create local settings (once)
+docker compose up -d   # start the database
+docker compose ps      # wait until the db is "(healthy)"
+docker compose down    # stop it (data is kept)
+```
+
+The database is reachable on `127.0.0.1:5432`. Data is stored in the named
+Docker volume `educator_pgdata`, so it survives restarts; `docker compose down -v`
+deletes it. See [docs/local-database.md](docs/local-database.md) for full
+start, verification, persistence, and cleanup instructions.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
