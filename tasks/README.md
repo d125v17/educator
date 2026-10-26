@@ -53,3 +53,5 @@ Each task has its own directory:
 ## Task index
 
 <!-- Add a link to each task directory here. -->
+
+- [TASK-001 — Local database running via Docker Compose](TASK-001-local-database-via-docker-compose/task.md) — `backlog`
