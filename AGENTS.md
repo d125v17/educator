@@ -23,6 +23,7 @@ Read the relevant documentation before working on a task.
 ## 2. Workflow
 
 - All development work must belong to a task in `tasks/`.
+- New tasks that change behavior must include automated tests.
 - Analysis and planning must not modify application source code.
 - For non-trivial tasks, prepare a technical plan before implementation.
 - Do not start implementation until the user explicitly approves the plan.
@@ -57,7 +58,8 @@ Read the relevant documentation before working on a task.
 - Avoid unnecessary dependencies.
 - Handle errors explicitly.
 - Never hardcode credentials, tokens, or secrets.
-- Add or update tests when behavior changes.
+- Add or update tests when behavior changes. Every new task that changes
+  behavior must include tests.
 - Keep implementation consistent with the approved plan.
 - Record relevant discoveries in `working-notes.md`.
 - Promote reusable project knowledge into `docs/` when appropriate.
@@ -68,6 +70,8 @@ Read the relevant documentation before working on a task.
 - Discover and use the project's actual test, lint, type-check, and build
   commands where relevant.
 - Run relevant checks when possible.
+- All tests must pass during verification. A task must not be marked complete
+  while tests fail.
 - Never claim a test or command passed unless it was actually executed.
 - Report failed, skipped, and unavailable checks honestly.
 - Distinguish environmental failures from implementation defects.

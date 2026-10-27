@@ -42,7 +42,9 @@ tasks/TASK-001-short-business-description/
 
 ### Step 3: Create the task directory and files
 
-Create these four files:
+Create these four files. Every task that changes behavior must include
+automated tests (see `docs/testing.md`); capture the test expectation in the
+task's acceptance criteria.
 
 #### task.md
 
@@ -153,6 +155,7 @@ Check that:
 - The task ID is unique.
 - All four files exist.
 - The task status is backlog.
+- The task notes the expectation of tests when it changes behavior.
 - The business description remains business-oriented.
 - The task is linked from tasks/README.md.
 - No application source files were modified.

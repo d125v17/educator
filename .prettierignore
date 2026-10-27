@@ -1,0 +1,23 @@
+# Build output and dependencies
+node_modules
+.next
+out
+build
+coverage
+
+# Generated database migrations
+drizzle
+
+# Lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Documentation is hand-wrapped prose, not code.
+*.md
+
+# External skill/agent instruction bundles are not part of this project's code.
+.agents
+.claude
+.grok
+skills-lock.json

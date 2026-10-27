@@ -115,3 +115,31 @@ To verify the container is gone:
 ```
 docker compose ps
 ```
+
+## Migrations and reset
+
+The schema is managed with Drizzle (see `decisions/0002-user-accounts-drizzle-scrypt.md`).
+The migration commands are documented in the project `README.md`
+(`npm run db:generate`, `npm run db:migrate`, `npm run db:reset`).
+
+To reproduce from a completely fresh database:
+
+```
+docker compose down -v   # delete the data volume
+docker compose up -d     # start a new, empty database
+npm run db:migrate       # apply migrations and seed the first admin
+```
+
+### Rollback
+
+`drizzle-kit` generates forward-only migrations, so rollback is a documented
+reset rather than an automatic down migration:
+
+- `npm run db:reset` drops the `public` and `drizzle` schemas, then reapplies
+  the migrations and the admin seed.
+- For a fully clean database, use `docker compose down -v`, then `up -d`, then
+  `npm run db:migrate` (commands above).
+
+`npm run db:reset` refuses to run unless the database host is loopback
+(`127.0.0.1`, `localhost`, or `::1`). To allow a non-local host, set
+`ALLOW_DESTRUCTIVE_DB_RESET=true` in `.env` — destructive, use with care.

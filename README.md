@@ -34,7 +34,40 @@ Docker volume `educator_pgdata`, so it survives restarts; `docker compose down -
 deletes it. See [docs/local-database.md](docs/local-database.md) for full
 start, verification, persistence, and cleanup instructions.
 
+### User accounts and migrations
+
+The schema is managed with Drizzle. Migrations live in `drizzle/`; the first
+admin is seeded from `ADMIN_EMAIL` / `ADMIN_PASSWORD` (set these in `.env`).
+
+```bash
+npm run db:generate   # generate SQL migrations from src/db/schema.ts
+npm run db:migrate    # apply migrations and seed the first admin
+npm run db:reset      # drop and recreate the schema, then migrate + seed
+```
+
+`db:reset` refuses to run unless the database host is loopback; set
+`ALLOW_DESTRUCTIVE_DB_RESET=true` in `.env` to override. See
+[docs/local-database.md](docs/local-database.md) for the fresh-database and
+rollback steps.
+
+The `users` table stores each account with a role of `user` or `admin` and a
+scrypt password hash. See
+[docs/decisions/0002-user-accounts-drizzle-scrypt.md](docs/decisions/0002-user-accounts-drizzle-scrypt.md).
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Validation
+
+Format, lint, and test the project:
+
+```bash
+npm run format        # format code with Prettier
+npm run format:check  # check formatting without writing
+npm run lint          # run ESLint
+npm test              # run the test suite (Vitest)
+```
+
+See [docs/testing.md](docs/testing.md) for details and conventions.
 
 ## Learn More
 

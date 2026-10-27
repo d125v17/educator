@@ -150,7 +150,8 @@ The current status must be recorded in `task.md` frontmatter.
 11. After fixes, set status to `review` and repeat independent review.
 12. When review is clean, proceed to `verification`.
 13. Run relevant tests and quality checks, and record evidence for each
-    acceptance criterion.
+    acceptance criterion. All tests must pass before the task can be
+    considered complete.
 14. Set status to `done`, `need verification`, `review failed`, or `blocked`
     according to the actual findings and remaining work.
 
@@ -183,6 +184,8 @@ history, and business goal.
 - Do not directly implement, plan, review, or verify an epic as if it were
   a normal task.
 - Business goals and acceptance criteria must be understandable and testable.
+- Every new task that changes behavior must include automated tests, and all
+  tests must pass at verification.
 - Technical design belongs in `plan.md`.
 - Hypotheses in `working-notes.md` are not approved decisions.
 - Record blockers and update status at phase changes.
@@ -219,3 +222,11 @@ Example:
 - [TASK-001 — User authentication epic](TASK-001-user-authentication/task.md)
 - [TASK-002 — Registration](TASK-002-registration/task.md)
 - [TASK-003 — Login](TASK-003-login/task.md)
+
+### Tasks
+
+- [TASK-002 — Authorization (epic)](TASK-002-authorization/task.md)
+  - [TASK-003 — User accounts schema, roles, and bootstrap admin migration](TASK-003-user-accounts-schema-and-roles/task.md)
+  - [TASK-004 — Sign-up and sign-in API endpoints](TASK-004-signup-signin-api/task.md)
+  - [TASK-005 — Sign-up and sign-in UI pages](TASK-005-signup-signin-ui/task.md)
+- [TASK-006 — Validation](TASK-006-validation/task.md)

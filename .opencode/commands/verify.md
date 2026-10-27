@@ -21,6 +21,7 @@ in the repository root.
 - Inspect relevant code and tests as necessary.
 - Discover and run the actual relevant test, lint, type-check, and build
   commands supported by the project.
+- All tests must pass. A task must not be marked `done` while any test fails.
 - Do not claim that a command was executed unless it actually was.
 - Do not modify application code during this review. Report required fixes
   instead.
@@ -51,6 +52,7 @@ Choose exactly one of the following statuses.
 
 Set `task.md` status to `done` when all of these conditions hold:
 - Every acceptance criterion is satisfied by sufficient evidence.
+- All project tests pass (no failing tests).
 - Relevant automated checks have passed, or any inapplicable checks have
   a documented justification.
 - No known significant defects or unresolved issues remain.
