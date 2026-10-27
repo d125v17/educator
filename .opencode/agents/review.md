@@ -1,7 +1,7 @@
 ---
 description: Independently review code changes without editing files
 mode: subagent
-model: openrouter/deepseek/deepseek-v4.1-flash
+model: openrouter/anthropic/claude-haiku-5.5
 permissions:
   - action: edit
     resource: "*"
