@@ -53,7 +53,9 @@ Update the task's `plan.md` with:
 10. Risks, alternatives, and rollback considerations where relevant.
 11. A mapping from every acceptance criterion to implementation and tests.
 12. Open questions and assumptions.
-13. Approval status: `pending`.
+13. Plan revision label `draft-1` and approval status `pending`. `/approve`
+    records the approval and copies the label into `task.md` as
+    `plan_revision`.
 
 Distinguish verified facts from assumptions. Do not claim to have inspected
 files, run commands, or verified behavior unless you actually did so.

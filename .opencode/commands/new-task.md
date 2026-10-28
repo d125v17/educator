@@ -53,10 +53,15 @@ Include YAML frontmatter:
 ---
 id: TASK-NNN
 title: Short business title
+type: task
 status: backlog
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
+
+The frontmatter fields are documented in `tasks/README.md`. Do not add other
+fields here; `/approve` adds the plan approval fields later, and only
+`/decompose --apply` adds `parent`.
 
 Then include:
 

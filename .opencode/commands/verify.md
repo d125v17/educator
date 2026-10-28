@@ -14,8 +14,17 @@ in the repository root.
 ## 1. Preconditions and scope
 
 - Confirm that `task.md` status is `verification`.
-- If the status is different, report the mismatch and do not silently force
-  the task into verification.
+- If the status is different, do not edit anything and do not silently force
+  the task into verification. Report the current status and the next step:
+  - `review`: run `/review` first; it records the independent review and
+    moves a clean task to `verification`.
+  - `review failed`: run `/implement` to fix the recorded findings, then
+    `/review` again.
+  - `need verification`: the user must resolve the manual check or decision
+    recorded in `review.md` (see section 7); the task then returns to
+    `verification`.
+  - `done`: the task is already complete.
+  - any other status: the task has not reached independent review yet.
 - Compare the actual implementation with the approved plan, business goal,
   and every acceptance criterion.
 - Inspect relevant code and tests as necessary.
@@ -58,6 +67,8 @@ Set `task.md` status to `done` when all of these conditions hold:
 - No known significant defects or unresolved issues remain.
 - No material ambiguity or decision requiring human confirmation remains.
 - The implementation matches the approved business goal and plan.
+- A dated Verification section with evidence for every acceptance criterion
+  has been appended to `review.md` (section 5).
 
 Do not require explicit user acceptance when these conditions are met.
 
@@ -111,7 +122,15 @@ other evidence demonstrates an implementation defect.
 
 ## 5. Record the result
 
-Update `review.md` with:
+Append a new dated section to `review.md`. Never overwrite, delete, or rewrite
+earlier review or verification sections; the history must be preserved. Start
+the section with:
+
+```
+## Verification (YYYY-MM-DD, plan <revision>)
+```
+
+and record:
 - Review date.
 - Summary of the implementation reviewed.
 - Results for every acceptance criterion.
@@ -151,3 +170,14 @@ If status is `review failed`, list the defects and the required corrective
 actions.
 
 Do not implement fixes as part of this command.
+
+## 7. After this command
+
+- `done`: no further action; the task is complete.
+- `review failed`: run `/implement <task>` (fix mode), then `/review <task>`,
+  then `/verify <task>` again.
+- `need verification`: the user performs the recorded manual check or makes
+  the recorded decision, records the result in `review.md` (or asks the agent
+  to record it), sets `task.md` status back to `verification`, and runs
+  `/verify <task>` again. Never set `done` on the user's behalf without that
+  rerun.

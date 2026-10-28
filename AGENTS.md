@@ -94,7 +94,11 @@ Read the relevant documentation before working on a task.
 
 Follow the status definitions in `tasks/README.md`.
 
-The `/review` command must determine and record exactly one final status:
+The `/review` command records the independent review in `review.md` and sets
+exactly one of `review failed` (a change is required) or `verification` (no
+finding requires a change). It never sets `done`.
+
+The `/verify` command must determine and record exactly one final status:
 
 - `done`: all acceptance criteria and required checks have sufficient evidence,
   no material unresolved issues remain, and human confirmation is not needed.
@@ -114,13 +118,17 @@ Rules for status selection:
   confirmed defect independently requires `review failed`.
 - When setting a final status, record the rationale and evidence in
   `review.md` and update `task.md`.
-- A task marked `done` by `/review` does not require additional explicit
+- `done` is set only by `/verify`, and only after a dated Verification section
+  with evidence for every acceptance criterion has been appended to
+  `review.md`. `task.md` frontmatter is the single source of truth for a
+  task's state.
+- A task marked `done` by `/verify` does not require additional explicit
   user acceptance if the completion criteria are sufficiently verified.
 - A task marked `need verification` must identify the exact action or decision
   required from the user.
 - A task marked `review failed` must identify the defect and corrective action.
-- After fixing review failures, return the task to `implementation` and repeat
-  review and verification.
+- After fixing review failures with `/implement`, the task returns to
+  `review`; repeat `/review` and then `/verify`.
 - Do not implement fixes as part of a review or verification command.
 
 ## 8. Documentation

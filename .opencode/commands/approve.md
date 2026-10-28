@@ -70,6 +70,12 @@ incomplete plan.
 
 Write the complete final plan to the current task's `plan.md`.
 
+Record the plan revision label in `plan.md`:
+- The first approval uses `draft-1`, the label created by `/start-planning`.
+- A renewed approval after a material plan change increments the label
+  (`draft-2`, `draft-3`, ...) and appends an entry to the plan's revision
+  history describing what changed and why.
+
 Preserve useful existing frontmatter or metadata where appropriate. Record the
 approval state, for example:
 
@@ -77,6 +83,7 @@ approval:
   status: approved
   approved_by: user
   approved_at: YYYY-MM-DD
+  revision: draft-1
 
 Use the actual current date. Do not fabricate a time or identity beyond the
 fact that the user explicitly invoked this approval command.
@@ -85,11 +92,19 @@ Ensure the file contains the entire final plan, not a summary or a diff.
 
 ## 5. Update task status
 
-Update the current task's `task.md`:
-- Set `status: implementation`.
-- Update the `updated` date.
-- Record that the technical plan has been approved, if the task format has an
-  appropriate field.
+Update the current task's `task.md` frontmatter (the fields are documented in
+`tasks/README.md`; do not add others):
+- `plan_approved`: the approval date.
+- `plan_approved_by`: `user`.
+- `plan_revision`: the revision label recorded in `plan.md`.
+- `updated`: the current date.
+- `status`:
+  - `planned`, or `blocked` during planning: set `implementation`.
+  - `implementation` or `review failed` (renewed approval of a plan change):
+    leave the status unchanged, so that `/implement` keeps the correct mode
+    and the recorded review findings stay in force.
+  - any other status: do not approve; report that the task is not awaiting
+    plan approval.
 
 Do not change the business goal or acceptance criteria unless the user
 explicitly requested and approved those changes.
@@ -99,7 +114,8 @@ explicitly requested and approved those changes.
 After writing:
 - Read both files back.
 - Confirm `plan.md` contains the complete final plan and approval status.
-- Confirm `task.md` has status `implementation`.
+- Confirm `task.md` has the status required by section 5 and that
+  `plan_revision` equals the label in `plan.md`.
 - Confirm no unrelated files were changed.
 
 If verification fails, report the failure honestly and do not claim success.

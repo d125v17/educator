@@ -146,3 +146,13 @@ Re-verified after the fixes (2026-10-27): `npm test` → 5 files, 20 tests passe
 - The DB URL is composed from `POSTGRES_*` (ADR 0001); no `DATABASE_URL`.
 - `crypto.scrypt` needs a callback wrapper under TypeScript (promisify loses
   the options overload).
+
+## Status reset (2026-10-28)
+
+`task.md` was set back from `done` to `review`. `done` had been written
+without a recorded third review and without a verification record: `review.md`
+ends with the second review's `review failed`, and no `/verify` evidence exists.
+The workflow files were corrected the same day (`/review` now appends the review
+to `review.md` and sets `review failed` or `verification`; only `/verify` may set
+`done`). Next steps: run `/review TASK-003`, then `/verify TASK-003`. TASK-004
+(`/implement`) waits until this task is `done`.

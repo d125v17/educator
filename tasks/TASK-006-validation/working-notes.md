@@ -147,3 +147,15 @@ No application-code changes were needed for this round.
   environment (npm arbiter bug); when it is used, Testing Library's peer
   `@testing-library/dom` must be installed explicitly.
 - Prettier intentionally ignores Markdown here; documentation is hand-wrapped.
+
+## Workflow fix affecting F6-1 and F6-2 (2026-10-28)
+
+Changed outside this task's `/implement` cycle, as part of the workflow fix
+requested by the user; recorded here for the next `/review` of this task:
+
+- F6-1: the `git *` allow rule in `.opencode/agents/review.md` was replaced by
+  read-only subcommands (`git status *`, `git diff *`, `git log *`,
+  `git show *`, `git blame *`, `git rev-parse *`, `git ls-files *`). The body
+  text now lists the same allowlist.
+- F6-2: no change needed. OpenCode v2 documents that a shell pattern ending in
+  ` *` also matches the bare command, so `npm test *` matches `npm test`.

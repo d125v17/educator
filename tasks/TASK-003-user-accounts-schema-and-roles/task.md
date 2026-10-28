@@ -3,9 +3,9 @@ id: TASK-003
 title: User accounts schema, roles, and bootstrap admin migration
 type: task
 parent: TASK-002
-status: done
+status: review
 created: 2026-10-27
-updated: 2026-10-27
+updated: 2026-10-28
 plan_approved: 2026-10-27
 plan_approved_by: user
 plan_revision: draft-3

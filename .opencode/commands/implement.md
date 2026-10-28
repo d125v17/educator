@@ -36,6 +36,20 @@ Stop after reporting the epic. Do not continue to implementation.
 
 If the task type or status is missing, contradictory, or incompatible with the documented schema, stop and report the inconsistency instead of guessing.
 
+### Dependency check
+
+If `task.md` has a `Dependencies` section:
+
+- For every blocking dependency, read that task's `task.md` frontmatter.
+- A dependency is satisfied only when its `task.md` status is `done`. The
+  `task.md` status is the single source of truth; do not re-derive a
+  dependency's completion from its `review.md`, `working-notes.md`, or the
+  code.
+- If a blocking dependency is not `done`, stop without editing application
+  code and report which dependency is unsatisfied and its current status,
+  unless the approved plan explicitly identifies this work as safe to do in
+  parallel.
+
 ## 2. Determine the implementation mode
 
 Select the mode from the current task status.
@@ -44,8 +58,11 @@ Select the mode from the current task status.
 
 Use this mode when `task.md` status is `implementation`.
 
-- Confirm that `plan.md` contains recorded user approval, including the approver and an approval reference.
-- Confirm that the approval refers to the exact current plan revision.
+- Confirm that `plan.md` records user approval: the approver, the approval
+  date, and the plan revision label (for example `draft-2`).
+- Confirm that `task.md` `plan_revision` equals the revision label recorded in
+  `plan.md`. If they differ, stop and report the mismatch; `/approve` records
+  the current revision.
 - Implement only the approved plan.
 - Do not expand the business scope or make material changes to the approved plan without renewed approval.
 
@@ -58,6 +75,9 @@ Use this mode when `task.md` status is `review failed`.
 - Read `task.md`, `plan.md`, relevant tests, and the affected source code.
 - Confirm that the review findings belong to this task and are consistent with its acceptance criteria and approved plan.
 - Confirm that the existing plan approval remains valid for the proposed fixes.
+- If a fix needs a material plan change, ask the user to run `/approve` with
+  the change. `/approve` records the new revision and keeps the task in
+  `review failed`, so this mode still applies afterwards.
 
 Treat `review.md` as the source of recorded review findings, not as authorization to expand the task's scope.
 
@@ -76,7 +96,18 @@ Do not modify `review.md` to make findings appear resolved. Preserve the review 
 
 If the status is neither `implementation` nor `review failed`, do not implement.
 
-Explain the current status and the required next workflow step. In particular, do not start implementation for tasks in `backlog`, `planning`, `planned`, `review`, `verification`, `need verification`, `done`, or `blocked`.
+Explain the current status and the next step:
+
+- `backlog`: run `/start-planning`.
+- `planning` or `planned`: the plan must be completed and approved with
+  `/approve`.
+- `review`: run `/review`; the implementation is awaiting independent review.
+- `verification`: run `/verify`.
+- `need verification`: the user must resolve the manual check or decision
+  recorded in `review.md`, then run `/verify` again.
+- `done`: the task is complete. Do not reopen it; further changes need a new
+  task.
+- `blocked`: the recorded blocker must be resolved first.
 
 ## 3. Common implementation rules
 
