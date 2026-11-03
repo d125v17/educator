@@ -99,14 +99,21 @@ Database access is server-only; it must not be imported by client components.
 | `package-lock.json` | updated by `npm install` | lockfile consistency |
 | `drizzle.config.ts` | new | dialect `postgresql`, schema path, `out: ./drizzle`, credentials from env |
 | `src/db/schema.ts` | new | `role` enum and `users` table |
+| `src/db/url.ts` | new | compose the connection URL from `POSTGRES_*` (no `DATABASE_URL`) |
 | `src/db/index.ts` | new | `pg` Pool + drizzle client (server-only) |
 | `src/db/migrate.ts` | new | programmatic migrate + idempotent admin seed |
+| `src/db/reset.ts` | new | destructive reset entry point (guarded) |
+| `src/db/reset-guard.ts` | new | loopback/override guard for `db:reset` |
 | `src/lib/password.ts` | new | scrypt `hashPassword`/`verifyPassword` |
 | `drizzle/` | new (generated) | SQL migrations and snapshots |
 | `.env.example` | edit | document `POSTGRES_*` (connection), `ADMIN_EMAIL`/`ADMIN_PASSWORD`, and `ALLOW_DESTRUCTIVE_DB_RESET` placeholders (no real secret) |
+| `.prettierignore` | edit | exclude generated `drizzle/` output from Prettier |
 | `src/lib/password.test.ts` | new | scrypt unit test |
+| `src/db/url.test.ts` | new | connection-URL unit tests |
+| `src/db/reset-guard.test.ts` | new | reset-guard unit tests |
 | `src/db/schema.test.ts` | new | DB integration test (schema, role, seed) |
 | `docs/decisions/0002-user-accounts-drizzle-scrypt.md` | new | ADR for the decisions above |
+| `docs/local-database.md` | edit | fresh-database and rollback steps |
 | `docs/README.md` | edit | index the ADR; note DB layer |
 | `docs/testing.md` | edit | how to run the DB integration tests |
 | `README.md` | edit | document `db:*` commands |
@@ -261,6 +268,37 @@ Unresolved (non-blocking):
 - Exact scrypt parameters (cost/blockSize/parallelization) — to be chosen and
   recorded; defaults such as N=16384, r=8, p=1 are acceptable for local use.
 - Whether to add a `server-only` dependency or rely on convention.
+
+## Post-approval clarifications (2026-10-28)
+
+The following changes were made after the draft-3 approval while resolving
+review findings. They are recorded here for transparency and are assessed as
+**non-material**: none changes the business goal, acceptance criteria,
+architecture, data model/schema, public API, dependencies, or configuration
+contract of this task. They are internal robustness, test, and documentation
+corrections within the behavior already described above.
+
+- **File-list synchronization (R3-6):** the "Files and modules to change" table
+  was updated to list modules that already existed in the approved draft-2/
+  draft-3 narrative (`src/db/url.ts`, `src/db/reset.ts`,
+  `src/db/reset-guard.ts`, `src/db/url.test.ts`, `src/db/reset-guard.test.ts`,
+  `docs/local-database.md`, `.prettierignore`). No new module or behavior was
+  introduced by this edit; it corrects documentation to match reality.
+- **Admin-seed serialization (R3-4):** `seedFirstAdmin` now performs its
+  existence check and insert inside a transaction guarded by
+  `pg_advisory_xact_lock`. This makes the already-specified idempotent seed
+  (plan step 6, "inserts the admin if absent") safe under concurrent runs. It
+  adds no schema change, dependency, or configuration, and does not alter the
+  success/failure contract.
+- **scrypt verification memory cap (R3-5):** `verifyPassword` rejects stored
+  parameters whose scrypt memory exceeds 256 MiB, and an expected key longer
+  than `KEY_LENGTH`. This is a hardening bound on the existing self-describing
+  hash format; it does not change hashes produced by `hashPassword` or the
+  stored format.
+
+No renewed plan approval was requested because none of these is a material
+plan change. If the user considers any of them material, this section should be
+superseded by an approved draft-4 revision.
 
 ## Approval status
 

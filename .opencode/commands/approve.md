@@ -47,6 +47,11 @@ to provide the task ID/path or paste the plan. Do not modify files yet.
   and ask for clarification.
 - Treat `/approve` as explicit approval of the final plan after applying the
   user's requested revisions.
+- A renewed approval is needed only for a material plan change as defined in
+  `tasks/README.md` ("Material plan changes"). Fixing review findings inside
+  the approved scope is not material: do not add review finding lists to the
+  revision history for it. If `/approve` is invoked for a non-material
+  change, say so; record the revision only if the user confirms they want it.
 
 ## 3. Validate the plan
 

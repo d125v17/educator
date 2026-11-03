@@ -1,11 +1,12 @@
 import { pathToFileURL } from "node:url";
 
 import { loadEnvConfig } from "@next/env";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 import { hashPassword } from "../lib/password";
+import { isValidEmail, normalizeEmail } from "../lib/validators";
 import { db, pool } from "./index";
 import * as schema from "./schema";
 import { users } from "./schema";
@@ -13,6 +14,10 @@ import { users } from "./schema";
 loadEnvConfig(process.cwd());
 
 const MIGRATIONS_FOLDER = "./drizzle";
+
+// Arbitrary application-level lock key; serializes concurrent admin seeding so
+// two `db:migrate` runs cannot both create an admin (see R3-4).
+const ADMIN_SEED_LOCK_KEY = 845330332;
 
 type Database = NodePgDatabase<typeof schema>;
 
@@ -27,50 +32,70 @@ export async function runMigrations(database: Database = db): Promise<void> {
 /**
  * Creates the very first admin account from `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
  *
+ * `ADMIN_EMAIL` is normalized the same way the sign-up/sign-in endpoints
+ * normalize emails (trimmed, lower-cased), so the seeded account can always be
+ * found at sign-in and cannot be duplicated by a differently-cased sign-up. It
+ * is also validated against the same email rules, so a malformed value fails
+ * the seed instead of silently creating an admin that can never sign in.
+ *
  * Idempotent: does nothing if an admin already exists. Throws when the
  * required environment variables are missing (and no admin exists yet), so no
  * default secret is used.
+ *
+ * The existence check and the insert run in one transaction guarded by an
+ * advisory lock, so concurrent runs serialize and cannot create two admins.
  */
 export async function seedFirstAdmin(
   database: Database = db,
   env: AdminSeedEnv = process.env,
 ): Promise<void> {
-  const existing = await database
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.role, "admin"))
-    .limit(1);
+  await database.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${ADMIN_SEED_LOCK_KEY})`);
 
-  if (existing.length > 0) {
-    console.log("An admin already exists; skipping the admin seed.");
-    return;
-  }
+    const existing = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, "admin"))
+      .limit(1);
 
-  const email = env.ADMIN_EMAIL;
-  const password = env.ADMIN_PASSWORD;
+    if (existing.length > 0) {
+      console.log("An admin already exists; skipping the admin seed.");
+      return;
+    }
 
-  if (!email || !password) {
-    throw new Error(
-      "ADMIN_EMAIL and ADMIN_PASSWORD must be set to seed the first admin.",
-    );
-  }
+    const email = env.ADMIN_EMAIL ? normalizeEmail(env.ADMIN_EMAIL) : undefined;
+    const password = env.ADMIN_PASSWORD;
 
-  const passwordHash = await hashPassword(password);
-  const inserted = await database
-    .insert(users)
-    .values({ email, passwordHash, role: "admin" })
-    .onConflictDoNothing({ target: users.email })
-    .returning({ id: users.id });
+    if (!email || !password) {
+      throw new Error(
+        "ADMIN_EMAIL and ADMIN_PASSWORD must be set to seed the first admin.",
+      );
+    }
 
-  if (inserted.length === 0) {
-    throw new Error(
-      `Could not seed the first admin: a user with email "${email}" already ` +
-        "exists but is not an admin. Resolve it manually or use a different " +
-        "ADMIN_EMAIL.",
-    );
-  }
+    if (!isValidEmail(email)) {
+      throw new Error(
+        `ADMIN_EMAIL "${email}" is not a valid email address. Set a valid ` +
+          "address and re-run the seed.",
+      );
+    }
 
-  console.log(`Seeded the first admin: ${email}`);
+    const passwordHash = await hashPassword(password);
+    const inserted = await tx
+      .insert(users)
+      .values({ email, passwordHash, role: "admin" })
+      .onConflictDoNothing({ target: users.email })
+      .returning({ id: users.id });
+
+    if (inserted.length === 0) {
+      throw new Error(
+        `Could not seed the first admin: a user with email "${email}" already ` +
+          "exists but is not an admin. Resolve it manually or use a different " +
+          "ADMIN_EMAIL.",
+      );
+    }
+
+    console.log(`Seeded the first admin: ${email}`);
+  });
 }
 
 /** Runs migrations and then seeds the first admin. */

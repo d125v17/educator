@@ -1,85 +1,177 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Educator
 
-## Getting Started
+A Next.js 16 (App Router) application with a local PostgreSQL database managed
+through Drizzle ORM.
 
-First, run the development server:
+This guide explains how to get the project running locally from a fresh
+checkout: install dependencies, start the database, apply migrations and the
+bootstrap admin seed, and run the development server.
+
+## Prerequisites
+
+- **Node.js 22.13 or newer** and npm (the installed tooling requires it).
+  Check with:
+  ```bash
+  node --version
+  npm --version
+  ```
+- **Docker with the Compose v2 plugin** (`docker compose`). No PostgreSQL
+  server needs to be installed on the host. Check with:
+  ```bash
+  docker compose version
+  ```
+
+## Quick start
 
 ```bash
+# 1. Install dependencies (uses the committed package-lock.json)
+npm install
+
+# 2. Create your local environment file (once)
+cp .env.example .env
+
+# 3. Start the local PostgreSQL database
+docker compose up -d
+
+# 4. Wait until the database reports "(healthy)"
+docker compose ps
+
+# 5. Apply migrations and seed the first admin
+npm run db:migrate
+
+# 6. Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Step 5 needs `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` the first time, so the
+seed can create the bootstrap admin. Once an admin exists, later `db:migrate`
+runs do not require them.
 
-## Local database
+## Environment variables
 
-The project runs a local PostgreSQL database with Docker Compose (Compose v2).
+`npm install` does not need any variables. The database and migration commands
+read a locally created `.env` file (git-ignored). Start from the committed
+`.env.example`.
+
+| Variable | Default (`.env.example`) | Purpose |
+| --- | --- | --- |
+| `POSTGRES_USER` | `educator` | Database user. |
+| `POSTGRES_PASSWORD` | `educator_local_pw` | Database password (local-only placeholder). Required; there is no hardcoded fallback in code. |
+| `POSTGRES_DB` | `educator` | Database name. |
+| `POSTGRES_PORT` | `5432` | Host port mapped to the container. Change it if `5432` is already in use (e.g. `5433`). |
+| `ADMIN_EMAIL` | — (commented out) | Bootstrap admin email. Used only when no admin exists yet. |
+| `ADMIN_PASSWORD` | — (commented out) | Bootstrap admin password. Used only when no admin exists yet. |
+| `ALLOW_DESTRUCTIVE_DB_RESET` | — (commented out) | Set to `true` to let `db:reset` run against a non-loopback host. Destructive; local use only. |
+
+`.env` is git-ignored and **must never be committed**. The committed
+`.env.example` only contains local, non-secret placeholders.
+
+## Database
+
+The database runs in Docker and is reachable at **`127.0.0.1:5432`** by default
+(or the `POSTGRES_PORT` you configured). It is published on loopback only.
 
 ```bash
-cp .env.example .env   # create local settings (once)
-docker compose up -d   # start the database
-docker compose ps      # wait until the db is "(healthy)"
-docker compose down    # stop it (data is kept)
+docker compose up -d      # start the database
+docker compose ps         # check health ("Up ... (healthy)")
+docker compose down       # stop it (data is kept)
+docker compose down -v    # stop it and delete all stored data
 ```
 
-The database is reachable on `127.0.0.1:5432`. Data is stored in the named
-Docker volume `educator_pgdata`, so it survives restarts; `docker compose down -v`
-deletes it. See [docs/local-database.md](docs/local-database.md) for full
-start, verification, persistence, and cleanup instructions.
+Data is stored in the Docker volume `educator_pgdata` and survives restarts.
 
-### User accounts and migrations
+### Migration commands
 
-The schema is managed with Drizzle. Migrations live in `drizzle/`; the first
-admin is seeded from `ADMIN_EMAIL` / `ADMIN_PASSWORD` (set these in `.env`).
+The schema lives in `src/db/schema.ts`; SQL migrations are generated into
+`drizzle/`.
 
 ```bash
-npm run db:generate   # generate SQL migrations from src/db/schema.ts
+npm run db:generate   # generate SQL migrations from the schema
 npm run db:migrate    # apply migrations and seed the first admin
 npm run db:reset      # drop and recreate the schema, then migrate + seed
 ```
 
-`db:reset` refuses to run unless the database host is loopback; set
-`ALLOW_DESTRUCTIVE_DB_RESET=true` in `.env` to override. See
-[docs/local-database.md](docs/local-database.md) for the fresh-database and
-rollback steps.
+`db:reset` refuses to run unless the database host is loopback
+(`127.0.0.1`, `localhost`, or `::1`). Set `ALLOW_DESTRUCTIVE_DB_RESET=true` in
+`.env` to override.
 
-The `users` table stores each account with a role of `user` or `admin` and a
-scrypt password hash. See
-[docs/decisions/0002-user-accounts-drizzle-scrypt.md](docs/decisions/0002-user-accounts-drizzle-scrypt.md).
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Validation
-
-Format, lint, and test the project:
+### Reproduce from a fresh database
 
 ```bash
-npm run format        # format code with Prettier
-npm run format:check  # check formatting without writing
-npm run lint          # run ESLint
-npm test              # run the test suite (Vitest)
+docker compose down -v   # delete the data volume
+docker compose up -d     # start a new, empty database
+npm run db:migrate       # apply migrations and seed the first admin
 ```
 
-See [docs/testing.md](docs/testing.md) for details and conventions.
+Rollback is a documented reset rather than an automatic down migration; see
+[docs/local-database.md](docs/local-database.md) for details.
 
-## Learn More
+The `users` table stores accounts with a role of `user` or `admin` and a scrypt
+password hash. See
+[docs/decisions/0002-user-accounts-drizzle-scrypt.md](docs/decisions/0002-user-accounts-drizzle-scrypt.md).
 
-To learn more about Next.js, take a look at the following resources:
+## Run the app
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev     # development server with hot reload
+npm run build   # production build (also type-checks)
+npm start       # serve the production build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The development server runs at
+[http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Quality checks
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run format:check  # check formatting without writing
+npm run format        # format with Prettier
+npm run lint          # run ESLint
+npm test              # run the test suite (Vitest)
+npm run test:watch    # run tests in watch mode
+npm run build         # production build / type-check
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The database integration tests (`src/db/schema.test.ts`) need the local
+database running and `POSTGRES_PASSWORD` set. If the database is unreachable or
+the password is missing, those tests are **skipped with a reason** — a skipped
+run is not a pass. See [docs/testing.md](docs/testing.md).
+
+## Troubleshooting
+
+- **Port `5432` is already in use.** Set a different `POSTGRES_PORT` (for
+  example `5433`) in `.env`, then run `docker compose up -d` again.
+- **`docker compose ps` does not show `(healthy)`.** Wait a few seconds and
+  re-run it; inspect logs with `docker compose logs db`.
+- **`db:migrate` fails with `POSTGRES_PASSWORD is not set`.** Create `.env`
+  from `.env.example` (`cp .env.example .env`).
+- **`db:migrate` fails asking for `ADMIN_EMAIL` / `ADMIN_PASSWORD`.** Set both
+  in `.env` before seeding the first admin (needed only when no admin exists).
+- **`db:reset` refuses to run.** It only runs against a loopback database host;
+  that is a safety guard, not a bug.
+- **Database tests are skipped.** Start the database (`docker compose up -d`)
+  and ensure `.env` has `POSTGRES_PASSWORD`.
+
+## Documentation
+
+- [docs/README.md](docs/README.md) — documentation index.
+- [docs/local-database.md](docs/local-database.md) — full database start,
+  verification, persistence, and cleanup guide.
+- [docs/testing.md](docs/testing.md) — testing and validation conventions.
+- [docs/decisions/](docs/decisions/) — architecture decision records.
+- [tasks/README.md](tasks/README.md) — task workflow and status rules.
+
+## Learn more
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Learn Next.js](https://nextjs.org/learn)
+- [Next.js GitHub repository](https://github.com/vercel/next.js)
+
+## Deploy
+
+The easiest way to deploy this Next.js app is the
+[Vercel Platform](https://vercel.com/new). See the
+[Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying)
+for more details.

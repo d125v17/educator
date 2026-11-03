@@ -7,6 +7,13 @@ const original = { ...process.env };
 
 beforeEach(() => {
   process.env = { ...original };
+  // Start from a clean slate so cases cannot inherit POSTGRES_* values loaded
+  // into the worker by other suites (e.g. schema.test.ts loads `.env`).
+  delete process.env.POSTGRES_USER;
+  delete process.env.POSTGRES_PASSWORD;
+  delete process.env.POSTGRES_DB;
+  delete process.env.POSTGRES_HOST;
+  delete process.env.POSTGRES_PORT;
 });
 
 afterEach(() => {
@@ -37,5 +44,24 @@ describe("databaseUrl", () => {
     process.env.POSTGRES_DB = "d";
 
     expect(databaseUrl()).toContain("p%40ss%20word");
+  });
+
+  it("treats empty variables as unset and falls back to the defaults", () => {
+    process.env.POSTGRES_USER = "";
+    process.env.POSTGRES_PASSWORD = "pw";
+    process.env.POSTGRES_HOST = "";
+    process.env.POSTGRES_PORT = "";
+    process.env.POSTGRES_DB = "";
+
+    expect(databaseUrl()).toBe(
+      "postgresql://educator:pw@127.0.0.1:5432/educator",
+    );
+  });
+
+  it("brackets IPv6 hosts to form a valid URL authority", () => {
+    process.env.POSTGRES_PASSWORD = "pw";
+    process.env.POSTGRES_HOST = "::1";
+
+    expect(databaseUrl()).toBe("postgresql://educator:pw@[::1]:5432/educator");
   });
 });

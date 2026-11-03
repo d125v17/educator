@@ -93,8 +93,8 @@ Normal tasks may use these statuses:
 - `verification`: tests and quality checks are in progress
 - `need verification`: automated checks and review are sufficiently complete,
   but a specific human check, decision, or manual test remains
-- `review failed`: review or verification found a confirmed defect,
-  unmet acceptance criterion, or material mismatch requiring changes
+- `review failed`: review or verification found at least one blocking
+  finding (`must-fix`; see "Review findings and dispositions")
 - `done`: acceptance criteria are sufficiently verified and required checks
   passed, or any justified limitations are explicitly documented
 - `blocked`: progress requires a decision, missing information, or an
@@ -143,6 +143,78 @@ section and never rewrites earlier findings. A renewed plan approval
 (`/approve` after a material change) does not change the status of a task in
 `implementation` or `review failed`.
 
+## Review findings and dispositions
+
+Every finding recorded by `/review` carries three labels:
+
+- `severity`: `critical`, `high`, `medium`, or `low`.
+- `type`: `defect` (wrong behaviour), `ac-gap` (an acceptance criterion is not
+  met), `plan-deviation` (a material mismatch with the approved plan),
+  `test-gap` (behaviour without an automated test), `hardening` (a safe
+  improvement, not a defect), `docs`, or `process`.
+- `confidence`: `confirmed` (reproduced with a command or test, or
+  demonstrated on the actual code path), `likely`, or `speculative` (code
+  reading only). When the reviewer could not run the validation commands,
+  nothing is `confirmed`.
+
+A finding is **blocking** when it is:
+
+- `critical` or `high`, of any type; or
+- `medium`, `confirmed`, and of type `defect`, `ac-gap`, or `plan-deviation`;
+  or
+- a `test-gap` for behaviour named in the approved plan's acceptance mapping.
+
+A `test-gap` on code that was added only to fix an earlier finding is not
+blocking. From the third review of the same plan revision, only `critical`
+and `high` findings are blocking.
+
+`/review` gives every finding exactly one **disposition** and records it in
+the Dispositions table of the review section:
+
+- `must-fix`: blocking; `/implement` fixes it in the next round.
+- `follow-up`: not blocking; listed under Follow-ups so `/verify` carries it
+  into the final record and a new task can be opened for it.
+- `accepted`: not blocking; the risk or behaviour is accepted, with a reason.
+- `rejected`: a false positive or outside this task's scope, with evidence.
+
+The latest Dispositions table is always the complete current state: rows that
+are `accepted`, `follow-up`, or `rejected` are carried forward from one review
+to the next, and the reviewer does not re-raise them. Findings are numbered
+`R<round>-F<n>` so identifiers never collide across reviews.
+
+`review failed` is set only when at least one row is `must-fix`; otherwise the
+outcome is `verification`. Low findings, non-blocking medium findings, tests
+for tests, documentation that enumerates tests, and `plan.md` not mirroring an
+ADR never fail a review on their own.
+
+If a third review of the same plan revision is still `review failed`, the loop
+is not converging: `/review` reports the chain of fix-induced findings, and the
+user decides whether to escalate the implementer model, split the remaining
+work into a new task, or accept the remaining findings.
+
+## Material plan changes
+
+A change is **material**, and needs renewed approval through `/approve`, when
+it adds or removes user-visible behaviour; changes an API shape, the data
+model, a dependency, or configuration; expands the scope to files owned by
+another task; or contradicts a decision recorded in the approved plan.
+
+A change is **not material** when it stays inside the approved scope: adding
+or correcting tests, error handling, hardening of planned behaviour, log
+sanitisation, documentation, and any fix of a `must-fix` finding that does not
+meet the definition above. Non-material changes do not get a plan revision;
+the review Dispositions table, `working-notes.md`, and ADRs are the record. A
+reviewer must not report "plan not updated" for them.
+
+## Commits
+
+Commit a task's work at the end of each `/implement` round, staging only the
+files changed in that round and the task directory, with a message such as
+`TASK-004: implement` or `TASK-004: review-fix round 3`. This lets a re-review
+diff against the previous round instead of re-auditing the whole task, and
+keeps one task's uncommitted files out of another task's review. Commit a
+task's remaining work before starting the next task.
+
 ## Task relationships and dependencies
 
 - `parent` identifies the epic that owns a child task.
@@ -166,8 +238,8 @@ section and never rewrites earlier findings. A renewed plan approval
 | Plan | `/start-planning` | `plan.md`, `working-notes.md`, status `planned` or `blocked` | Yes, inside the task directory |
 | Approve | `/approve` | Recorded user approval and revision label in `plan.md` | Yes |
 | Implement | `/implement` | Code, tests, `working-notes.md` | Yes |
-| Review | `/review`, through the read-only `review` subagent | Independent findings | Must not modify application code |
-| Record review | `/review` | Findings appended to `review.md`; status `review failed` or `verification` | Yes |
+| Review | `/review`, through the read-only `review` subagent | Independent findings with severity, type, and confidence | Must not modify application code |
+| Record review | `/review` | Findings, dispositions, and follow-ups appended to `review.md`; status `review failed` or `verification` | Yes |
 | Verify | `/verify` | Per-criterion verification evidence appended to `review.md`; final status | Yes |
 | Resolve human verification | the user (with agent help if asked), then `/verify` again | Recorded result of the required manual check or decision | Yes |
 | Complete epic | no command yet; done manually against the epic completion criteria | Evidence that child tasks and epic-level criteria are complete | Yes |
@@ -184,15 +256,17 @@ section and never rewrites earlier findings. A renewed plan approval
 5. `/approve` sets status to `implementation`.
 6. `/implement` implements the approved plan and adds or updates tests.
 7. `/implement` sets status to `review`.
-8. `/review` runs the independent `review` subagent and appends its findings
-   to `review.md`.
-9. If defects or unmet criteria are found, `/review` sets status to
-   `review failed`.
-10. `/implement` fixes the review findings without expanding the approved
-    scope. A material plan change needs `/approve` first; the status stays
-    `review failed`.
-11. After the fixes, `/implement` sets status to `review`; repeat `/review`.
-12. When the review is clean, `/review` sets status to `verification`.
+8. `/review` runs the independent `review` subagent, gives every finding a
+   disposition, and appends findings and dispositions to `review.md`.
+9. If any finding is `must-fix`, `/review` sets status to `review failed`.
+10. `/implement` fixes the `must-fix` findings only, at every site where the
+    same pattern occurs, without expanding the approved scope, and records the
+    round (identifiers, sites, files changed, checks) in `working-notes.md`.
+    A material plan change needs `/approve` first; the status stays
+    `review failed`. Non-material remediation needs no new plan revision.
+11. After the fixes, `/implement` sets status to `review`; repeat `/review`,
+    which re-verifies the `must-fix` findings and reviews the changed files.
+12. When no finding is `must-fix`, `/review` sets status to `verification`.
 13. `/verify` runs the relevant tests and quality checks and appends evidence
     for each acceptance criterion to `review.md`. All tests must pass before
     the task can be considered complete.
@@ -244,11 +318,16 @@ history, and business goal.
 - Planning may modify only files inside the relevant task directory and
   must not modify application source code.
 - Implementation must follow the currently approved plan.
-- A material plan change requires renewed user approval.
+- A material plan change (see "Material plan changes") requires renewed user
+  approval; non-material remediation of review findings does not.
 - Independent review must not modify application source code.
 - Review findings must be preserved in `review.md`; implementation must not
   silently erase or rewrite findings to make them appear resolved.
-- After fixes, rerun independent review and relevant verification checks.
+- After fixes, rerun the independent review; the re-review verifies the
+  `must-fix` findings at every affected site and reviews the files changed by
+  the fix round.
+- Only `must-fix` findings fail a review. `follow-up` and `accepted` findings
+  are recorded and do not block `done`.
 - Do not claim that tests or other checks passed unless they were executed.
 - Decomposition must not create child tasks before explicit user approval.
 - Applying decomposition must preserve the original task and validate IDs,

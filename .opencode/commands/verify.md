@@ -25,6 +25,11 @@ in the repository root.
     `verification`.
   - `done`: the task is already complete.
   - any other status: the task has not reached independent review yet.
+- Read the latest review's `### Dispositions` table in `review.md`. Rows with
+  disposition `follow-up` or `accepted` are recorded decisions, not
+  unresolved issues, and do not block `done`. If any row is still `must-fix`,
+  the task should not be in `verification`: report the inconsistency and stop
+  without editing.
 - Compare the actual implementation with the approved plan, business goal,
   and every acceptance criterion.
 - Inspect relevant code and tests as necessary.
@@ -64,7 +69,9 @@ Set `task.md` status to `done` when all of these conditions hold:
 - All project tests pass (no failing tests).
 - Relevant automated checks have passed, or any inapplicable checks have
   a documented justification.
-- No known significant defects or unresolved issues remain.
+- No known significant defects or unresolved issues remain. Findings that
+  `/review` dispositioned as `follow-up` or `accepted` are not unresolved
+  issues for this purpose.
 - No material ambiguity or decision requiring human confirmation remains.
 - The implementation matches the approved business goal and plan.
 - A dated Verification section with evidence for every acceptance criterion
@@ -136,6 +143,8 @@ and record:
 - Results for every acceptance criterion.
 - Commands executed and their actual outcomes.
 - Defects, uncertainties, and environment limitations.
+- Follow-ups carried from the latest review's Dispositions table, by
+  identifier, so they survive task completion.
 - Final status and rationale.
 - Required next actions, if any.
 
@@ -158,6 +167,7 @@ Report:
 - Evidence for each acceptance criterion.
 - Checks executed, including any failures or checks that could not run.
 - Defects or uncertainties found.
+- Follow-ups carried over, if any.
 - The next action, if any.
 
 If status is `done`, state that the task was automatically marked complete

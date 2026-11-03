@@ -130,6 +130,25 @@ docker compose up -d     # start a new, empty database
 npm run db:migrate       # apply migrations and seed the first admin
 ```
 
+### Admin email normalization
+
+The first-admin seed normalizes `ADMIN_EMAIL` (trimmed, lower-cased) and
+validates it before inserting, matching how the sign-up/sign-in endpoints store
+and look up emails. A database that was seeded *before* this change may still
+hold a non-normalized admin email (for example `Admin@Example.com`), which the
+sign-in endpoint's normalized lookup cannot find.
+
+To repair an existing local database, normalize the stored addresses once
+(check for case-variant duplicates first, since `users.email` is unique and
+case-sensitive):
+
+```
+update users set email = lower(trim(email)) where email <> lower(trim(email));
+```
+
+Alternatively, fix `ADMIN_EMAIL` in `.env` and re-seed from scratch with
+`npm run db:reset` (destructive).
+
 ### Rollback
 
 `drizzle-kit` generates forward-only migrations, so rollback is a documented

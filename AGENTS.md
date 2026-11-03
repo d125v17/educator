@@ -30,7 +30,9 @@ Read the relevant documentation before working on a task.
 - Record the approver and the exact approved plan revision in `plan.md`.
 - Implement only the approved scope.
 - Ask before making major architectural decisions or materially expanding scope.
-- A material change to an approved plan requires renewed user approval.
+- A material change to an approved plan, as defined in `tasks/README.md`
+  ("Material plan changes"), requires renewed user approval. Fixing review
+  findings inside the approved scope is not a material change.
 - Update the task status when a phase changes, following `tasks/README.md`.
 - If blocked, record the reason and the decision or information needed.
 
@@ -86,6 +88,9 @@ Read the relevant documentation before working on a task.
 - Check correctness, edge cases, security, maintainability, and regressions.
 - Compare the implementation against the approved plan and acceptance criteria.
 - Separate confirmed defects from suggestions and unverified assumptions.
+- Label each finding with severity, type, and confidence, and give it a
+  disposition (`must-fix`, `follow-up`, `accepted`, or `rejected`) as defined
+  in `tasks/README.md`. Only `must-fix` findings fail a review.
 - Record findings and evidence in `review.md` through the appropriate workflow.
 - Do not modify application code during review or verification.
 - If defects are found, report the evidence and required corrective actions.
@@ -94,9 +99,10 @@ Read the relevant documentation before working on a task.
 
 Follow the status definitions in `tasks/README.md`.
 
-The `/review` command records the independent review in `review.md` and sets
-exactly one of `review failed` (a change is required) or `verification` (no
-finding requires a change). It never sets `done`.
+The `/review` command records the independent review and its dispositions in
+`review.md` and sets exactly one of `review failed` (at least one `must-fix`
+finding) or `verification` (no `must-fix` finding; `follow-up` and `accepted`
+findings do not block). It never sets `done`.
 
 The `/verify` command must determine and record exactly one final status:
 
@@ -127,8 +133,10 @@ Rules for status selection:
 - A task marked `need verification` must identify the exact action or decision
   required from the user.
 - A task marked `review failed` must identify the defect and corrective action.
-- After fixing review failures with `/implement`, the task returns to
-  `review`; repeat `/review` and then `/verify`.
+- After fixing the `must-fix` findings with `/implement` (at every site where
+  the same pattern occurs, and nothing else), the task returns to `review`;
+  the re-review covers the `must-fix` findings and the changed files. Repeat
+  `/review` and then `/verify`.
 - Do not implement fixes as part of a review or verification command.
 
 ## 8. Documentation

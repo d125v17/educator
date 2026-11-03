@@ -64,33 +64,68 @@ Use this mode when `task.md` status is `implementation`.
   `plan.md`. If they differ, stop and report the mismatch; `/approve` records
   the current revision.
 - Implement only the approved plan.
-- Do not expand the business scope or make material changes to the approved plan without renewed approval.
+- Do not expand the business scope or make material changes to the approved
+  plan without renewed approval. "Material" is defined in `tasks/README.md`
+  ("Material plan changes").
 
 ### Mode B: Fix review findings
 
 Use this mode when `task.md` status is `review failed`.
 
-- Read `review.md` completely.
-- Identify every unresolved finding from the latest review, including its severity, affected files or behavior, and reproduction or verification evidence.
-- Read `task.md`, `plan.md`, relevant tests, and the affected source code.
-- Confirm that the review findings belong to this task and are consistent with its acceptance criteria and approved plan.
-- Confirm that the existing plan approval remains valid for the proposed fixes.
-- If a fix needs a material plan change, ask the user to run `/approve` with
-  the change. `/approve` records the new revision and keeps the task in
+#### Work list
+
+- Read `review.md` completely. The `### Dispositions` table of the latest
+  review is the work list: implement only the rows whose disposition is
+  `must-fix`.
+- Do not implement `follow-up`, `accepted`, or `rejected` rows, even when the
+  change is small or you are already editing that file. Every extra change
+  widens the diff the next review must cover, and that is how review loops
+  stop converging. If you believe a non-blocking finding must be fixed now,
+  say so in the final report and leave it unchanged.
+- If the latest review has no Dispositions table (a review recorded before
+  the dispositions rule existed), treat the findings that its Outcome
+  paragraph names as the reason for `review failed` as `must-fix`, and all
+  other findings as `follow-up`.
+- Read `task.md`, `plan.md`, the relevant tests, and the affected source code.
+- Confirm that the must-fix findings belong to this task and are consistent
+  with its acceptance criteria and approved plan.
+- Decide for each fix whether it is a material plan change as defined in
+  `tasks/README.md`. Remediation inside the approved scope (tests, error
+  handling, hardening of planned behaviour, log sanitisation, documentation)
+  is not material and needs no `/approve`; do not ask for a new plan revision
+  for it. If a fix is material, ask the user to run `/approve` with the
+  change. `/approve` records the new revision and keeps the task in
   `review failed`, so this mode still applies afterwards.
 
-Treat `review.md` as the source of recorded review findings, not as authorization to expand the task's scope.
+#### For each must-fix finding
 
-Fix the confirmed defects and unmet acceptance criteria identified by the review. Do not make unrelated refactors or changes merely to improve style.
+1. Reproduce it from the recorded evidence before changing anything.
+2. Fix the pattern, not only the cited location. Search the codebase for every
+   other site with the same pattern: sibling route handlers, every call site
+   of the same helper, every script or test that repeats the construct. Fix
+   all of them in this round and list every site in `working-notes.md`.
+3. Add or update the test that would have caught the finding, at every site
+   fixed. A test added for one route must have its twin for each sibling
+   route changed in the same way.
+4. Re-run the finding's evidence scenario and confirm it no longer applies.
 
-If a finding conflicts with the approved plan, requires a material plan change, or is ambiguous in a way that could change intended behavior:
+Treat `review.md` as the source of recorded review findings, not as
+authorization to expand the task's scope. Do not make unrelated refactors or
+changes merely to improve style.
+
+If a must-fix finding conflicts with the approved plan, requires a material
+plan change, or is ambiguous in a way that could change intended behaviour:
 
 - Do not guess or silently change scope.
 - Record the issue and the decision needed in `working-notes.md`.
-- Set the task to `blocked` only if progress cannot safely continue and the documented workflow permits that transition.
+- Set the task to `blocked` only if progress cannot safely continue and the
+  documented workflow permits that transition.
 - Ask the user for clarification or renewed plan approval.
 
-Do not modify `review.md` to make findings appear resolved. Preserve the review history. Record the fixes and their evidence in `working-notes.md`; the next independent `/review` run will assess whether the findings are resolved.
+Do not modify `review.md` to make findings appear resolved. Preserve the
+review history. Record the fixes and their evidence in `working-notes.md`;
+the next independent `/review` run will assess whether the findings are
+resolved.
 
 ### Invalid status
 
@@ -133,6 +168,23 @@ Do not edit unrelated tasks or modify the task index unless the approved impleme
 
 If implementation or fixes are ready for independent review:
 
+- Run the full check suite (`npm test`, `npm run lint`, `npm run format:check`,
+  `npm run build`) and record the actual results. Do not claim a check passed
+  unless it ran and passed.
+- Inspect the final diff. It must contain only the files needed for the
+  approved scope (Mode A) or for the must-fix findings (Mode B).
+- Append a round record to `working-notes.md`. Use the heading
+  `## Implementation round (YYYY-MM-DD)` in Mode A, or
+  `## Review-fix round <n> (YYYY-MM-DD, Review <N>)` in Mode B, and record:
+  - the must-fix identifiers addressed and, for each, every site fixed;
+  - the exact list of files changed in this round;
+  - the commands run and their actual results;
+  - anything deliberately left unchanged, and why.
+  `/review` hands this record to the reviewer so that a re-review covers the
+  delta instead of the whole task again.
+- Commit this round's work as described in `tasks/README.md` ("Commits"),
+  unless the user has said not to commit: stage only the files in the round
+  record plus the task directory, never the whole working tree.
 - Update `task.md` status to `review`.
 - Update the task's date according to the repository's conventions.
 - Do not mark the task `done`; independent review and verification must determine the outcome.
@@ -150,7 +202,9 @@ Report:
 
 - The mode used: normal implementation or review-fix mode.
 - The changes made.
-- Which review findings were addressed, referring to the finding identifiers or descriptions in `review.md`.
+- Which must-fix findings were addressed, by identifier, and every site fixed
+  for each.
+- Non-blocking findings left unchanged on purpose, by identifier.
 - Tests and other checks actually executed, including their results.
 - Any unresolved findings, risks, or decisions needed.
 - The final task status and the reason for it.

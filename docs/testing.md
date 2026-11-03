@@ -78,9 +78,40 @@ PostgreSQL database (see `local-database.md`). It creates a throwaway database,
 applies the migrations from `drizzle/`, and verifies the schema, the `role`
 enum, email uniqueness, and the bootstrap-admin seed. The database and password
 tests run in the Node environment. If `POSTGRES_PASSWORD` is not configured
-(from `.env`) or the database is unreachable, the tests are skipped with a
-message — a skipped run is not a pass, so configure `.env` and start the
-database (`docker compose up -d`) before relying on it.
+(from `.env`), the database is unreachable, or `POSTGRES_HOST` is not loopback,
+the tests are skipped with a reason — a skipped run is not a pass, so configure
+`.env` and start the database (`docker compose up -d`) before relying on it.
+
+### API and authentication tests
+
+The sign-up/sign-in logic and the session helpers are split out of the route
+handlers so they can be tested without a running Next.js server. The test
+files map to areas as follows. Read the test titles for the exact cases; this
+document does not enumerate them, and adding a test does not require a change
+here.
+
+| File | Area | Needs the database |
+| --- | --- | --- |
+| `src/lib/validators.test.ts` | Input validation | no |
+| `src/lib/session.test.ts` | Session cookie attributes and session-id validation | no |
+| `src/lib/http.test.ts` | JSON body parsing, size and content-type limits, error bodies, error-log sanitisation | no |
+| `src/lib/auth.test.ts` | Sign-up, sign-in, current user, and session helpers against the real schema | yes (throwaway database) |
+| `src/lib/auth.timing.test.ts` | Sign-in timing equalisation, with the password module mocked | no |
+| `src/app/api/routes.test.ts` | Route handlers with `next/headers` and the auth/database modules mocked: status mapping, error shape, cookies | no |
+
+`vitest.config.mts` mirrors the `@/*` path alias from `tsconfig.json` so tests
+can import the route handlers directly.
+
+Run these with `npm test`; the integration tests additionally need `.env`
+configured and the local database running. To exercise the whole stack
+including Next.js, run `npm run dev` and call the endpoints, for example:
+
+```
+curl -i -c jar.txt -H 'content-type: application/json' \
+  -d '{"email":"user@example.com","password":"correct-horse"}' \
+  http://127.0.0.1:3000/api/signup
+curl -i -b jar.txt http://127.0.0.1:3000/api/me
+```
 
 ## Expectations for tasks
 

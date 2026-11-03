@@ -14,12 +14,20 @@ export function databaseUrl(): string {
     );
   }
 
-  const user = process.env.POSTGRES_USER ?? "educator";
-  const host = process.env.POSTGRES_HOST ?? "127.0.0.1";
-  const port = process.env.POSTGRES_PORT ?? "5432";
-  const database = process.env.POSTGRES_DB ?? "educator";
+  const user = process.env.POSTGRES_USER || "educator";
+  const port = process.env.POSTGRES_PORT || "5432";
+  const database = process.env.POSTGRES_DB || "educator";
+  const host = normalizeHost(process.env.POSTGRES_HOST || "127.0.0.1");
 
   return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(
     password,
   )}@${host}:${port}/${database}`;
+}
+
+/** Wraps IPv6 hosts in brackets so they form a valid URL authority. */
+function normalizeHost(host: string): string {
+  if (host.startsWith("[")) {
+    return host;
+  }
+  return host.includes(":") ? `[${host}]` : host;
 }

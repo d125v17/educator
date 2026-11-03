@@ -3,12 +3,12 @@ id: TASK-004
 title: Sign-up and sign-in API endpoints
 type: task
 parent: TASK-002
-status: implementation
+status: review failed
 created: 2026-10-27
-updated: 2026-10-27
-plan_approved: 2026-10-27
+updated: 2026-11-03
+plan_approved: 2026-11-03
 plan_approved_by: user
-plan_revision: draft-1
+plan_revision: draft-5
 ---
 
 # Business Task: Sign-up and sign-in API endpoints

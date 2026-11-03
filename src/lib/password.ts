@@ -19,6 +19,24 @@ const MIN_N = 16384;
 const MAX_N = 1 << 20;
 const MAX_R = 32;
 const MAX_P = 16;
+// Cap the scrypt memory budget (`128 * N * r` bytes) so a crafted or corrupted
+// stored hash cannot force multi-gigabyte allocations during verification.
+const MAX_MEMORY = 256 * 1024 * 1024;
+
+/** scrypt cost parameters. */
+export interface ScryptParameters {
+  N: number;
+  r: number;
+  p: number;
+}
+
+/** Default scrypt cost parameters used by {@link hashPassword}. */
+export const DEFAULT_SCRYPT_PARAMETERS: ScryptParameters = { N, r: R, p: P };
+
+/** Approximate scrypt working memory in bytes for the given parameters. */
+function memoryFor(n: number, r: number): number {
+  return 128 * n * r;
+}
 
 function derive(
   password: string,
@@ -41,16 +59,28 @@ function derive(
  * Hashes a password with scrypt using a random per-password salt.
  *
  * Returns a self-describing string: `scrypt$N$r$p$<salt-b64>$<hash-b64>`.
+ *
+ * `parameters` defaults to the local-development cost parameters; tests use it
+ * to produce hashes with non-default (but in-bounds) parameters.
  */
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(
+  password: string,
+  parameters: ScryptParameters = DEFAULT_SCRYPT_PARAMETERS,
+): Promise<string> {
+  const { N: n, r, p } = parameters;
   const salt = randomBytes(SALT_BYTES);
-  const derived = await derive(password, salt, KEY_LENGTH, { N, r: R, p: P });
+  const derived = await derive(password, salt, KEY_LENGTH, {
+    N: n,
+    r,
+    p,
+    maxmem: memoryFor(n, r) * 2,
+  });
 
   return [
     PREFIX,
-    N,
-    R,
-    P,
+    n,
+    r,
+    p,
     salt.toString("base64"),
     derived.toString("base64"),
   ].join("$");
@@ -64,9 +94,46 @@ export async function verifyPassword(
   password: string,
   stored: string,
 ): Promise<boolean> {
+  const parsed = parseStoredHash(stored);
+  if (!parsed) {
+    return false;
+  }
+
+  const { n, r, p, salt, expected } = parsed;
+  // Size the memory limit for the stored parameters so valid hashes above
+  // Node's default `maxmem` still verify. `parseStoredHash` caps the budget;
+  // any derivation error yields `false`.
+  try {
+    const derived = await derive(password, salt, expected.length, {
+      N: n,
+      r,
+      p,
+      maxmem: memoryFor(n, r) * 2,
+    });
+    return (
+      derived.length === expected.length && timingSafeEqual(derived, expected)
+    );
+  } catch {
+    return false;
+  }
+}
+
+interface StoredHash {
+  n: number;
+  r: number;
+  p: number;
+  salt: Buffer;
+  expected: Buffer;
+}
+
+/**
+ * Parses and bounds-checks a stored hash. Returns `null` for malformed values
+ * and for parameters that fall outside the accepted work/memory bounds.
+ */
+function parseStoredHash(stored: string): StoredHash | null {
   const parts = stored.split("$");
   if (parts.length !== 6 || parts[0] !== PREFIX) {
-    return false;
+    return null;
   }
 
   const n = Number(parts[1]);
@@ -83,29 +150,27 @@ export async function verifyPassword(
     p < 1 ||
     p > MAX_P
   ) {
-    return false;
+    return null;
   }
 
   const salt = Buffer.from(parts[4], "base64");
   const expected = Buffer.from(parts[5], "base64");
-  if (salt.length === 0 || expected.length === 0) {
-    return false;
+  if (
+    salt.length === 0 ||
+    expected.length === 0 ||
+    expected.length > KEY_LENGTH
+  ) {
+    return null;
   }
 
-  // Size the memory limit for the stored parameters so valid hashes above
-  // Node's default `maxmem` still verify; any derivation error yields `false`.
-  const maxmem = 128 * n * r * 2;
-  try {
-    const derived = await derive(password, salt, expected.length, {
-      N: n,
-      r,
-      p,
-      maxmem,
-    });
-    return (
-      derived.length === expected.length && timingSafeEqual(derived, expected)
-    );
-  } catch {
-    return false;
+  if (memoryFor(n, r) > MAX_MEMORY) {
+    return null;
   }
+
+  return { n, r, p, salt, expected };
+}
+
+/** Whether a stored hash is well-formed and within the accepted bounds. */
+export function isSupportedStoredHash(stored: string): boolean {
+  return parseStoredHash(stored) !== null;
 }

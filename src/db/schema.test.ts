@@ -7,6 +7,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import * as schema from "./schema";
+import { isLoopbackHost } from "./reset-guard";
 import { databaseUrl } from "./url";
 
 // Load `.env` so the suite can see POSTGRES_PASSWORD (Vitest does not).
@@ -33,11 +34,23 @@ let testPool: Pool | undefined;
 let testDb: NodePgDatabase<typeof schema> | undefined;
 let migrate: MigrateModule | undefined;
 let reachable = false;
+let skipReason = "database integration test was not run";
 let testDatabaseName = "";
 
 beforeAll(async () => {
+  // This suite creates and drops a throwaway database; only do that on a local
+  // server, mirroring the `db:reset` guard.
+  const host = process.env.POSTGRES_HOST || "127.0.0.1";
+  if (!isLoopbackHost(host)) {
+    reachable = false;
+    skipReason = `POSTGRES_HOST="${host}" is not loopback; skipping DB tests`;
+    return;
+  }
+
   if (!process.env.POSTGRES_PASSWORD) {
     reachable = false;
+    skipReason =
+      "POSTGRES_PASSWORD is not configured (.env); skipping DB tests";
     return;
   }
 
@@ -47,6 +60,7 @@ beforeAll(async () => {
     reachable = true;
   } catch {
     reachable = false;
+    skipReason = "local PostgreSQL is unreachable; skipping DB tests";
     return;
   }
 
@@ -62,6 +76,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // `drop database ... with (force)` can terminate an idle backend while a pool
+  // is closing, which `pg` re-emits as an unhandled `error`. Ignore that
+  // teardown-time error only (the throwaway database is being discarded), so a
+  // genuine run-time pool error is still surfaced.
+  testPool?.on("error", () => {});
+  adminPool?.on("error", () => {});
   await testPool?.end();
   if (adminPool && reachable && testDatabaseName.length > 0) {
     await adminPool.query(
@@ -79,7 +99,7 @@ beforeEach(async () => {
 
 describe("users schema and roles", () => {
   it("has a role enum restricted to exactly user and admin", async (ctx) => {
-    if (!reachable) ctx.skip();
+    if (!reachable) ctx.skip(skipReason);
 
     const result = await testPool!.query<{ values: string }>(
       "select enum_range(null::role)::text as values",
@@ -88,7 +108,7 @@ describe("users schema and roles", () => {
   });
 
   it("stores users with a role and rejects an invalid role", async (ctx) => {
-    if (!reachable) ctx.skip();
+    if (!reachable) ctx.skip(skipReason);
 
     await testPool!.query(
       "insert into users (email, password_hash, role) values ($1, $2, $3)",
@@ -104,7 +124,7 @@ describe("users schema and roles", () => {
   });
 
   it("enforces unique email addresses", async (ctx) => {
-    if (!reachable) ctx.skip();
+    if (!reachable) ctx.skip(skipReason);
 
     await testPool!.query(
       "insert into users (email, password_hash, role) values ($1, $2, $3)",
@@ -122,7 +142,7 @@ describe("users schema and roles", () => {
 
 describe("bootstrap admin seed", () => {
   it("creates exactly one admin and is idempotent", async (ctx) => {
-    if (!reachable) ctx.skip();
+    if (!reachable) ctx.skip(skipReason);
 
     const env = { ADMIN_EMAIL: "admin@test.local", ADMIN_PASSWORD: "test-pw" };
 
@@ -136,7 +156,7 @@ describe("bootstrap admin seed", () => {
   });
 
   it("fails when a non-admin user already uses ADMIN_EMAIL", async (ctx) => {
-    if (!reachable) ctx.skip();
+    if (!reachable) ctx.skip(skipReason);
 
     await testPool!.query(
       "insert into users (email, password_hash, role) values ($1, $2, $3)",
@@ -152,10 +172,44 @@ describe("bootstrap admin seed", () => {
   });
 
   it("fails when no admin exists and admin env is missing", async (ctx) => {
-    if (!reachable) ctx.skip();
+    if (!reachable) ctx.skip(skipReason);
 
     await expect(migrate!.seedFirstAdmin(testDb!, {})).rejects.toThrow(
       /ADMIN_EMAIL and ADMIN_PASSWORD/,
     );
+  });
+
+  it("skips without admin env when an admin already exists", async (ctx) => {
+    if (!reachable) ctx.skip(skipReason);
+
+    await migrate!.seedFirstAdmin(testDb!, {
+      ADMIN_EMAIL: "existing@test.local",
+      ADMIN_PASSWORD: "test-pw",
+    });
+
+    // The relaxed seed only requires ADMIN_* when it actually creates an admin.
+    await expect(migrate!.seedFirstAdmin(testDb!, {})).resolves.toBeUndefined();
+  });
+
+  it("serializes concurrent seeds and creates exactly one admin", async (ctx) => {
+    if (!reachable) ctx.skip(skipReason);
+
+    const results = await Promise.allSettled([
+      migrate!.seedFirstAdmin(testDb!, {
+        ADMIN_EMAIL: "first@test.local",
+        ADMIN_PASSWORD: "test-pw",
+      }),
+      migrate!.seedFirstAdmin(testDb!, {
+        ADMIN_EMAIL: "second@test.local",
+        ADMIN_PASSWORD: "test-pw",
+      }),
+    ]);
+
+    expect(results.every((r) => r.status === "fulfilled")).toBe(true);
+
+    const result = await testPool!.query<{ count: string }>(
+      "select count(*)::text as count from users where role = 'admin'",
+    );
+    expect(result.rows[0].count).toBe("1");
   });
 });

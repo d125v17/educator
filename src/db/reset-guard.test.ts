@@ -13,6 +13,7 @@ describe("assertResetAllowed", () => {
       assertResetAllowed({ POSTGRES_HOST: "localhost" }),
     ).not.toThrow();
     expect(() => assertResetAllowed({ POSTGRES_HOST: "::1" })).not.toThrow();
+    expect(() => assertResetAllowed({ POSTGRES_HOST: "[::1]" })).not.toThrow();
   });
 
   it("refuses a non-loopback host", () => {

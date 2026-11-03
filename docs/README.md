@@ -28,6 +28,10 @@ Update this list from `package.json` when dependencies change.
     (PostgreSQL 17 on Docker Compose)
   - `0002-user-accounts-drizzle-scrypt.md` — user accounts, role enum, Drizzle,
     and scrypt password hashing
+  - `0003-signup-signin-api-sessions.md` — sign-up/sign-in API endpoints and
+    server-side sessions
+  - `0004-review-loop-convergence.md` — review severity gate, finding
+    dispositions, material plan changes, and the reviewer model pin
 
 Pages marked "planned" do not exist yet and must not be treated as available
 sources of truth.
@@ -41,7 +45,7 @@ specific run.
 | Stage | Model | Input / output per 1M tokens |
 | --- | --- | --- |
 | Every stage by default (task creation, planning, implementation, verification) | `openrouter/deepseek/deepseek-v4.1-flash` | $0.02 / $1.00 |
-| Independent review subagent (`.opencode/agents/review.md`) | `openrouter/anthropic/claude-haiku-5.5` | pinned in the agent config |
+| Independent review subagent (`.opencode/agents/review.md`) | `openrouter/anthropic/claude-sonnet-5.5` | $2.00 / $10.00 (pinned in the agent config) |
 | Optional escalation for difficult planning or implementation | `openrouter/~deepseek/deepseek-pro-latest` | $0.13 / $0.40 |
 | Optional escalation for high-risk independent review | `openrouter/openai/gpt-6-sol` | $2.00 / $10.00 |
 
@@ -51,8 +55,12 @@ Rules:
   run instead, for example `opencode run --model <id>` or by selecting it for
   one session with `/models`.
 - The independent review agent (`.opencode/agents/review.md`) is pinned to
-  `openrouter/anthropic/claude-haiku-5.5` on purpose, so a review cannot
-  silently inherit an expensive session model.
+  `openrouter/anthropic/claude-sonnet-5.5` on purpose. A pinned model means a
+  review cannot silently inherit the session model, and this is the one
+  deliberate exception to the cheap-by-default rule: the cheaper reviewer
+  produced low-confidence findings that kept the review loop from converging
+  (see `decisions/0004-review-loop-convergence.md`). Review a task on a
+  cheaper model only by overriding it for that run.
 - Prefer escalating planning over escalating review; a weak plan is more
   expensive to correct than a missed minor review finding.
 - For output-heavy work, `openrouter/deepseek/deepseek-v4.1-flash-1017`
@@ -60,8 +68,9 @@ Rules:
 
 Verified facts and limits:
 
-- Prices above were read from the OpenRouter catalog on 2026-10-26 and are
-  not a guarantee of future pricing. Cache reads, provider routing, and
+- Prices above were read from the OpenRouter catalog on 2026-10-26 (the
+  review subagent row on 2026-11-03) and are not a guarantee of future
+  pricing. Cache reads, provider routing, and
   time-of-day price overrides can change actual spend.
 - Catalog listing is not proof of quality. Treat the escalation choices as
   untested hypotheses until measured on real tasks in this project.

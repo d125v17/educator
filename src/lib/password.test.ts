@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { hashPassword, verifyPassword } from "./password";
+import {
+  hashPassword,
+  isSupportedStoredHash,
+  verifyPassword,
+} from "./password";
 
 describe("password hashing", () => {
   it("produces a self-describing scrypt hash", async () => {
@@ -43,12 +47,31 @@ describe("password hashing", () => {
     ).resolves.toBe(false);
   });
 
-  it("returns false (does not throw) for in-bounds parameters above the default maxmem", async () => {
+  it("verifies a valid hash whose N exceeds the default maxmem", async () => {
+    // N=65536, r=8 needs ~64 MiB, above Node's default 32 MiB maxmem, so this
+    // only succeeds if verifyPassword sizes maxmem for the stored parameters.
+    const hash = await hashPassword("some-password", { N: 65536, r: 8, p: 1 });
+    await expect(verifyPassword("some-password", hash)).resolves.toBe(true);
+    await expect(verifyPassword("wrong-password", hash)).resolves.toBe(false);
+  });
+
+  it("rejects stored parameters that exceed the scrypt memory budget", async () => {
     const hash = await hashPassword("some-password");
     const parts = hash.split("$");
-    parts[1] = "32768"; // r=8 with N=32768 exceeds Node's default 32 MiB maxmem
-    await expect(
-      verifyPassword("some-password", parts.join("$")),
-    ).resolves.toBe(false);
+    parts[1] = String(1 << 20); // N=2^20 with r=8 needs ~1 GiB
+    parts[2] = "8";
+    expect(isSupportedStoredHash(parts.join("$"))).toBe(false);
+  });
+
+  it("rejects a stored derived key longer than KEY_LENGTH", async () => {
+    const hash = await hashPassword("some-password");
+    const parts = hash.split("$");
+    parts[5] = Buffer.alloc(65).toString("base64");
+    expect(isSupportedStoredHash(parts.join("$"))).toBe(false);
+  });
+
+  it("accepts a well-formed stored hash", async () => {
+    const hash = await hashPassword("some-password");
+    expect(isSupportedStoredHash(hash)).toBe(true);
   });
 });
