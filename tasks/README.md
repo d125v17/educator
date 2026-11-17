@@ -356,3 +356,4 @@ Example:
   - [TASK-004 — Sign-up and sign-in API endpoints](TASK-004-signup-signin-api/task.md)
   - [TASK-005 — Sign-up and sign-in UI pages](TASK-005-signup-signin-ui/task.md)
 - [TASK-006 — Validation](TASK-006-validation/task.md)
+- [TASK-007 — Tailwind CSS on the Pages Router](TASK-007-tailwind-css-pages-router/task.md)
