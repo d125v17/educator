@@ -1,6 +1,7 @@
 import Input from "@/components/Input";
 import Panel from "@/components/Panel";
 import Button from "@/components/Button";
+import PanelHeader from "@/components/PanelHeader";
 import React from "react";
 
 export default function Home() {
@@ -13,9 +14,8 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold underline">Hello world!</h1>
-      Home
       <Panel>
+        <PanelHeader>Login</PanelHeader>
         <Input
           label="name"
           value={name}
